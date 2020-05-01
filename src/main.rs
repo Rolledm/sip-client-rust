@@ -1,7 +1,17 @@
 use orbtk::prelude::*;
+use orbtk::theme::DEFAULT_THEME_CSS;
 use std::net::{TcpStream};
 use std::io::{Read, Write};
 use std::str::from_utf8;
+
+static MY_CSS: &'static str = include_str!("./main.css");
+
+fn get_theme() -> ThemeValue {
+    ThemeValue::create_from_css(DEFAULT_THEME_CSS)
+        .extension_css(MY_CSS)
+        .build()
+}
+
 
 #[derive(Debug, Copy, Clone)]
 enum Action {
@@ -39,7 +49,7 @@ impl State for MainViewState {
                     println!("Login");
                     println!("ext {}", ctx.widget().get_mut::<String16>("ext"));
                     println!("pass {}", ctx.widget().get_mut::<String16>("pass"));
-                    ctx.widget().set("status_string", String16::from("Logging"));
+                    ctx.widget().set("login_status_string", String16::from("Logging"));
 
                     match TcpStream::connect("localhost:7878") {
                         Ok(mut stream) => {
@@ -74,7 +84,9 @@ impl State for MainViewState {
 widget!(MainView<MainViewState> {
     ext: String16,
     pass: String16,
-    status_string: String16
+    login_status_string: String16
+    //main_status_string: String16,
+    //feature_status_string: String16
 });
 
 impl Template for MainView {
@@ -94,118 +106,155 @@ impl Template for MainView {
                     .attach(Grid::column(0))
                     .child(
                             Stack::create()
-                        .orientation("vertical")
-                        .child(TextBox::create()
-                            .height(8.0)
-                            .water_mark("Ext.")
-                            .margin(2.0)
-                            .text(("ext", id))
-                            .build(ctx))
-                        .child(TextBox::create()
-                            .height(8.0)
-                            .margin(2.0)
-                            .text(("pass", id))
-                            .water_mark("Pass.")
-                            .build(ctx))
-                        .child(Button::create()
-                            .margin(2.0)
-                            .on_click(move |states, _| {
-                                states.get_mut::<MainViewState>(id).action(Action::Login);
-                                true
-                            })
-                            .text("Login")
-                            .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
-                            .build(ctx),)
-                        .child(TextBlock::create()
-                            .height(8.0)
-                            .margin(5.0)
-                            .text(("status_string", id))
-                            .horizontal_alignment("center")
-                            .class("h1")
-                            .build(ctx),)
-                        .horizontal_alignment("center")
-                        .vertical_alignment("center")
-                        .build(ctx),
+                                .orientation("vertical")
+                                .child(TextBox::create()
+                                    .height(8.0)
+                                    .water_mark("Ext.")
+                                    .margin(2.0)
+                                    .text(("ext", id))
+                                    .build(ctx))
+                                .child(TextBox::create()
+                                    .height(8.0)
+                                    .margin(2.0)
+                                    .text(("pass", id))
+                                    .water_mark("Pass.")
+                                    .build(ctx))
+                                .child(Button::create()
+                                    .margin(2.0)
+                                    .on_click(move |states, _| {
+                                        states.get_mut::<MainViewState>(id).action(Action::Login);
+                                        true
+                                    })
+                                    .text("Login")
+                                    .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
+                                    .build(ctx),)
+                                .child(TextBlock::create()
+                                    .height(8.0)
+                                    .margin(5.0)
+                                    .text(("login_status_string", id))
+                                    .horizontal_alignment("center")
+                                    .class("h1")
+                                    .build(ctx),)
+                                .horizontal_alignment("center")
+                                .vertical_alignment("center")
+                                .build(ctx),
                     )
                     .build(ctx),
                 )
                 .child(
                     Grid::create()
-                    .element("login-screen")
+                    .element("main-screen")
                     .attach(Grid::column(1))
                     .child(
                             Stack::create()
-                        .orientation("vertical")
-                        .child(TextBox::create()
-                            .height(8.0)
-                            .water_mark("Ext.")
-                            .margin(2.0)
-                            .text(("ext", id))
-                            .build(ctx))
-                        .child(TextBox::create()
-                            .height(8.0)
-                            .margin(2.0)
-                            .text(("pass", id))
-                            .water_mark("Pass.")
-                            .build(ctx))
-                        .child(Button::create()
-                            .margin(2.0)
-                            .on_click(move |states, _| {
-                                states.get_mut::<MainViewState>(id).action(Action::Login);
-                                true
-                            })
-                            .text("Login")
-                            .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
-                            .build(ctx),)
-                        .child(TextBlock::create()
-                            .height(8.0)
-                            .margin(5.0)
-                            .text(("status_string", id))
-                            .horizontal_alignment("center")
-                            .class("h1")
-                            .build(ctx),)
-                        .horizontal_alignment("center")
-                        .vertical_alignment("center")
-                        .build(ctx),
+                                .orientation("vertical")
+                                .child(TextBlock::create()
+                                    .height(8.0)
+                                    .margin(5.0)
+                                    .text("Status line...")
+                                    .horizontal_alignment("left")
+                                    .class("h3")
+                                    .build(ctx),)
+                                .child(TextBlock::create() // ext handler
+                                    .height(8.0)
+                                    .margin(5.0)
+                                    .text("Ext.: 1175")
+                                    .horizontal_alignment("left")
+                                    .class("h3")
+                                    .build(ctx),)
+                                .child(TextBox::create() // change .text
+                                    .height(8.0)
+                                    .margin(2.0)
+                                    .text(("pass", id))
+                                    .horizontal_alignment("left")
+                                    .water_mark("dial...")
+                                    .build(ctx))
+                                .child(Stack::create()
+                                    .orientation("horizontal")
+                                    .horizontal_alignment("center")
+                                    .child(Button::create()
+                                        .margin(2.0)
+                                        .on_click(move |states, _| {
+                                            states.get_mut::<MainViewState>(id).action(Action::Login);
+                                            true
+                                        })
+                                        .text("Call")
+                                        .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
+                                        .build(ctx),)
+                                    .child(Button::create()
+                                        .margin(2.0)
+                                        .on_click(move |states, _| {
+                                            states.get_mut::<MainViewState>(id).action(Action::Login);
+                                            true
+                                        })
+                                        .text("Check")
+                                        .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
+                                        .build(ctx),)
+                                    .child(Button::create()
+                                        .margin(2.0)
+                                        .on_click(move |states, _| {
+                                            states.get_mut::<MainViewState>(id).action(Action::Login);
+                                            true
+                                        })
+                                        .text("Cancel")
+                                        .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
+                                        .build(ctx),)
+                                    .build(ctx),)
+                                .horizontal_alignment("center")
+                                .vertical_alignment("center")
+                                .build(ctx),
                     )
                     .build(ctx),
                 )
                 .child(
                     Grid::create()
-                    .element("login-screen")
+                    .element("feature-screen")
                     .attach(Grid::column(0))
                     .attach(Grid::row(1))
                     .attach(Grid::column_span(2))
                     .child(
-                            Stack::create()
+                        Stack::create()
                         .orientation("vertical")
-                        .child(TextBox::create()
-                            .height(8.0)
-                            .water_mark("Ext.")
-                            .margin(2.0)
-                            .text(("ext", id))
-                            .build(ctx))
-                        .child(TextBox::create()
-                            .height(8.0)
-                            .margin(2.0)
-                            .text(("pass", id))
-                            .water_mark("Pass.")
-                            .build(ctx))
-                        .child(Button::create()
-                            .margin(2.0)
-                            .on_click(move |states, _| {
-                                states.get_mut::<MainViewState>(id).action(Action::Login);
-                                true
-                            })
-                            .text("Login")
-                            .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
-                            .build(ctx),)
                         .child(TextBlock::create()
                             .height(8.0)
                             .margin(5.0)
-                            .text(("status_string", id))
+                            .text("Features:")
+                            .horizontal_alignment("left")
+                            .class("h3")
+                            .build(ctx),)
+                        .child(TextBlock::create() // ext handler
+                            .height(8.0)
+                            .margin(5.0)
+                            .text("Your presence: Available")
+                            .horizontal_alignment("left")
+                            .class("h3")
+                            .build(ctx),)
+                        .child(Stack::create()
+                            .orientation("horizontal")
                             .horizontal_alignment("center")
-                            .class("h1")
+                            .child(TextBox::create() // change .text
+                                .height(8.0)
+                                .margin(2.0)
+                                .text(("pass", id))
+                                .horizontal_alignment("left")
+                                .water_mark("Change presence...")
+                                .build(ctx))
+                            .child(Button::create()
+                                .margin(2.0)
+                                .on_click(move |states, _| {
+                                    states.get_mut::<MainViewState>(id).action(Action::Login);
+                                    true
+                                })
+                                .text("Change")
+                                .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
+                                .build(ctx),)
+                            .build(ctx),)
+                        .child(TextBlock::create() // ext handler
+                            .height(8.0)
+                            .margin(5.0)
+                            .text("DND: disabled")
+                            .horizontal_alignment("left")
+                            .class("h3")
                             .build(ctx),)
                         .horizontal_alignment("center")
                         .vertical_alignment("center")
@@ -224,13 +273,10 @@ fn main() {
             Window::create()
                 .title("SIP Client")
                 .position((100.0, 100.0))
-                .size(700.0, 300.0)
+                .size(500.0, 320.0)
+                .theme(get_theme())
                 .child(MainView::create().margin(4.0).build(ctx))
                 .build(ctx)
         })
         .run();
 }
-
-/*fn state<'a>(id: Entity, states: &'a mut StatesContext) -> &'a mut MainViewState {
-    states.get_mut(id);
-}*/
