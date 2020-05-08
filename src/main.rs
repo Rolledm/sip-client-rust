@@ -187,15 +187,6 @@ impl Template for MainView {
                                             states.get_mut::<MainViewState>(id).action(Action::Login);
                                             true
                                         })
-                                        .text("Check")
-                                        .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
-                                        .build(ctx),)
-                                    .child(Button::create()
-                                        .margin(2.0)
-                                        .on_click(move |states, _| {
-                                            states.get_mut::<MainViewState>(id).action(Action::Login);
-                                            true
-                                        })
                                         .text("Cancel")
                                         .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
                                         .build(ctx),)
@@ -215,23 +206,16 @@ impl Template for MainView {
                     .child(
                         Stack::create()
                         .orientation("vertical")
-                        .child(TextBlock::create()
-                            .height(8.0)
-                            .margin(5.0)
-                            .text("Features:")
-                            .horizontal_alignment("left")
-                            .class("h3")
-                            .build(ctx),)
                         .child(TextBlock::create() // ext handler
                             .height(8.0)
                             .margin(5.0)
-                            .text("Your presence: Available")
+                            .text("Your presence: unknown")
                             .horizontal_alignment("left")
                             .class("h3")
                             .build(ctx),)
                         .child(Stack::create()
                             .orientation("horizontal")
-                            .horizontal_alignment("center")
+                            .horizontal_alignment("left")
                             .child(TextBox::create() // change .text
                                 .height(8.0)
                                 .margin(2.0)
@@ -249,14 +233,34 @@ impl Template for MainView {
                                 .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
                                 .build(ctx),)
                             .build(ctx),)
-                        .child(TextBlock::create() // ext handler
+                        .child(Stack::create()
+                            .orientation("horizontal")
+                            .horizontal_alignment("left")
+                            .child(TextBlock::create() // ext handler
+                                .height(8.0)
+                                .margin(5.0)
+                                .text("DND: unknown")
+                                .horizontal_alignment("left")
+                                .class("h3")
+                                .build(ctx),)
+                            .child(Button::create()
+                                .margin(2.0)
+                                .on_click(move |states, _| {
+                                    states.get_mut::<MainViewState>(id).action(Action::Login);
+                                    true
+                                })
+                                .text("Change")
+                                .icon(material_font_icons::KEYBOARD_ARROW_RIGHT_FONT_ICON)
+                                .build(ctx),)
+                            .build(ctx),)
+                        .child(TextBlock::create()
                             .height(8.0)
                             .margin(5.0)
-                            .text("DND: disabled")
+                            .text("1176: unknown")
                             .horizontal_alignment("left")
                             .class("h3")
                             .build(ctx),)
-                        .horizontal_alignment("center")
+                        .horizontal_alignment("left")
                         .vertical_alignment("center")
                         .build(ctx),
                     )
