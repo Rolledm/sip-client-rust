@@ -1,8 +1,11 @@
+use xmlparser as xml;
+
 use orbtk::prelude::*;
 use orbtk::theme::DEFAULT_THEME_CSS;
 use std::net::{TcpStream};
 use std::io::{Read, Write};
 use std::str::from_utf8;
+use std::fs;
 
 static MY_CSS: &'static str = include_str!("./main.css");
 
@@ -272,6 +275,9 @@ impl Template for MainView {
 }
 
 fn main() {
+    let text = load_file("./config/settings.xml");
+    parse(&text);
+
     Application::new()
         .window(|ctx| {
             Window::create()
@@ -283,4 +289,17 @@ fn main() {
                 .build(ctx)
         })
         .run();
+}
+
+fn parse(text: &str) {
+    for token in xml::Tokenizer::from(text) {
+        println!("{:?}", token.unwrap());
+    }
+}
+
+fn load_file(path: &str) -> String {
+    let mut file = fs::File::open(path).unwrap();
+    let mut text = String::new();
+    file.read_to_string(&mut text).unwrap();
+    text
 }
