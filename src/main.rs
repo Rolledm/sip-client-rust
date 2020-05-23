@@ -44,15 +44,38 @@ impl MainViewState {
     }
 }
 
+fn login(ext: String, pass: String) -> Result<String16, &'static str> {
+    println!("your ext = {}\nyour pass = {}\n", ext, pass);
+    Ok(String16::from("1176"))
+}
+
 impl State for MainViewState {
+    fn init(&mut self, _: &mut Registry, ctx: &mut Context<'_>) {
+        ctx.widget().set("logged_ext", String16::from(format!("Ext: ")));
+    }
+
+
     fn update(&mut self, _: &mut Registry, ctx: &mut Context<'_>) {
         if let Some(action) = self.action {
             match action {
                 Action::Login => {
-                    println!("Login");
-                    println!("ext {}", ctx.widget().get_mut::<String16>("ext"));
-                    println!("pass {}", ctx.widget().get_mut::<String16>("pass"));
                     ctx.widget().set("login_status_string", String16::from("Logging"));
+                    let ext = ctx.widget().get_mut::<String16>("ext").as_string();
+                    let pass = ctx.widget().get_mut::<String16>("pass").as_string();
+                    let login = login(ext, pass);
+                    match login {
+                        Ok(ext) => {
+                            ctx.widget().set("login_status_string", String16::from("Success!"));
+                            ctx.widget().set("logged_ext", String16::from(format!("Ext: {}", ext)));
+                        },
+                        Err(e) => {
+                            println!("Error: {}", e);
+                            ctx.widget().set("login_status_string", String16::from("Error"));
+                        }
+                    }
+                    /*println!("Login");
+                    println!("ext {}", ctx.widget().get_mut::<String16>("ext"));
+                    println!("pass {}", ctx.widget().get_mut::<String16>("pass"));*/
 
                     match TcpStream::connect("localhost:7878") {
                         Ok(mut stream) => {
@@ -87,7 +110,8 @@ impl State for MainViewState {
 widget!(MainView<MainViewState> {
     ext: String16,
     pass: String16,
-    login_status_string: String16
+    login_status_string: String16,
+    logged_ext: String16
     //main_status_string: String16,
     //feature_status_string: String16
 });
@@ -161,7 +185,7 @@ impl Template for MainView {
                                 .child(TextBlock::create() // ext handler
                                     .height(8.0)
                                     .margin(5.0)
-                                    .text("Ext.: 1175")
+                                    .text(("logged_ext", id))
                                     .horizontal_alignment("left")
                                     .class("h3")
                                     .build(ctx),)
