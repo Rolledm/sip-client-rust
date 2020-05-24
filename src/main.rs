@@ -1,11 +1,10 @@
-use xmlparser as xml;
-
 use orbtk::prelude::*;
 use orbtk::theme::DEFAULT_THEME_CSS;
 use std::net::{TcpStream};
 use std::io::{Read, Write};
 use std::str::from_utf8;
 use std::fs;
+use xmltree::Element;
 
 static MY_CSS: &'static str = include_str!("./main.css");
 
@@ -67,6 +66,7 @@ impl State for MainViewState {
                         Ok(ext) => {
                             ctx.widget().set("login_status_string", String16::from("Success!"));
                             ctx.widget().set("logged_ext", String16::from(format!("Ext: {}", ext)));
+                            // also change application state
                         },
                         Err(e) => {
                             println!("Error: {}", e);
@@ -316,9 +316,8 @@ fn main() {
 }
 
 fn parse(text: &str) {
-    for token in xml::Tokenizer::from(text) {
-        println!("{:?}", token.unwrap());
-    }
+    let domain = Element::parse(text.as_bytes()).unwrap();//.get_child("domain");
+    println!("{}", domain.get_child("domain").unwrap().get_text().unwrap());
 }
 
 fn load_file(path: &str) -> String {

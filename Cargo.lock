@@ -1260,7 +1260,7 @@ name = "sip_client"
 version = "0.1.0"
 dependencies = [
  "orbtk",
- "xmlparser",
+ "xmltree",
 ]
 
 [[package]]
@@ -1662,7 +1662,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b07db065a5cf61a7e4ba64f29e67db906fb1787316516c4e6e5ff0fea1efcd8a"
 
 [[package]]
-name = "xmlparser"
-version = "0.13.1"
+name = "xmltree"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccb4240203dadf40be2de9369e5c6dec1bf427528115b030baca3334c18362d7"
+checksum = "77a607efe600db25447a8d9bab1f39217a82c4ba160b51b027d7c4f6053004df"
+dependencies = [
+ "xml-rs",
+]
