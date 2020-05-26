@@ -43,9 +43,35 @@ impl MainViewState {
     }
 }
 
-fn login(ext: String, pass: String) -> Result<String16, &'static str> {
+fn login(ext: &String, pass: &String) -> Result<(), &'static str> {
     println!("your ext = {}\nyour pass = {}\n", ext, pass);
-    Ok(String16::from("1176"))
+
+    match TcpStream::connect("localhost:7878") {
+        Ok(mut stream) => {
+            println!("Connected!");
+            let msg = format!("Register {} {}", ext, pass);
+            stream.write(msg.as_bytes()).unwrap();
+            let mut data = [0; 10];
+            match stream.read(&mut data) {
+                Ok(_) => {
+                    let text = from_utf8(&data).unwrap();
+                    if text.starts_with("200 OK") {
+                        println!("Successfully registered!");
+                        return Ok(());
+                    }
+                    println!("Output from server: {}", text);
+                    //self.app_state = AppState::Main;
+                },
+                Err(e) => {
+                    println!("Err: {}", e);
+                }
+            }
+        },
+        Err(e) => {
+            println!("Connection failed: {}", e);
+        }
+    }
+    Err("Register failed")
 }
 
 impl State for MainViewState {
@@ -61,9 +87,9 @@ impl State for MainViewState {
                     ctx.widget().set("login_status_string", String16::from("Logging"));
                     let ext = ctx.widget().get_mut::<String16>("ext").as_string();
                     let pass = ctx.widget().get_mut::<String16>("pass").as_string();
-                    let login = login(ext, pass);
+                    let login = login(&ext, &pass);
                     match login {
-                        Ok(ext) => {
+                        Ok(_) => {
                             ctx.widget().set("login_status_string", String16::from("Success!"));
                             ctx.widget().set("logged_ext", String16::from(format!("Ext: {}", ext)));
                             // also change application state
@@ -76,28 +102,6 @@ impl State for MainViewState {
                     /*println!("Login");
                     println!("ext {}", ctx.widget().get_mut::<String16>("ext"));
                     println!("pass {}", ctx.widget().get_mut::<String16>("pass"));*/
-
-                    match TcpStream::connect("localhost:7878") {
-                        Ok(mut stream) => {
-                            println!("Connected!");
-                            let msg = b"Hello";
-                            stream.write(msg).unwrap();
-                            let mut data = [0; 10];
-                            match stream.read(&mut data) {
-                                Ok(_) => {
-                                    let text = from_utf8(&data).unwrap();
-                                    println!("Output from server: {}", text);
-                                    self.app_state = AppState::Main;
-                                },
-                                Err(e) => {
-                                    println!("Err: {}", e);
-                                }
-                            }
-                        },
-                        Err(e) => {
-                            println!("Connection failed: {}", e);
-                        }
-                    }
 
                 }
             }
