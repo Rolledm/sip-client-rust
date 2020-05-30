@@ -45,11 +45,20 @@ impl MainViewState {
 
 fn login(ext: &String, pass: &String) -> Result<(), &'static str> {
     println!("your ext = {}\nyour pass = {}\n", ext, pass);
+    let mut message = sip_rld::Message::new(sip_rld::MessageType::Request(sip_rld::RequestMethod::Register), String::from("my.dom.ru"));
+
+    message.to(String::new(), ext.to_string())
+            .via("TCP".to_string(), "localhost".to_string(), "5060".to_string())
+            .max_forwards("70".to_string())
+            .cseq("1".to_string())
+            .call_id("HARDCODED".to_string())
+            .request_uri("localhost".to_string());
+
 
     match TcpStream::connect("localhost:7878") {
         Ok(mut stream) => {
             println!("Connected!");
-            let msg = format!("Register {} {}", ext, pass);
+            let msg = message.build_message();
             stream.write(msg.as_bytes()).unwrap();
             let mut data = [0; 10];
             match stream.read(&mut data) {

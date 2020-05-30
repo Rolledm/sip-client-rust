@@ -1260,8 +1260,15 @@ name = "sip_client"
 version = "0.1.0"
 dependencies = [
  "orbtk",
+ "sip_rld",
  "xmltree",
 ]
+
+[[package]]
+name = "sip_rld"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd26479ca93178b256f19135546d2467570bbe2f5660399e133f8f32a905915f"
 
 [[package]]
 name = "siphasher"
