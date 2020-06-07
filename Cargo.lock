@@ -1266,9 +1266,9 @@ dependencies = [
 
 [[package]]
 name = "sip_rld"
-version = "0.2.0"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd26479ca93178b256f19135546d2467570bbe2f5660399e133f8f32a905915f"
+checksum = "1c82b2b96ff5ed1206634a681f9d1ed339f7f74254b3a67f351ade63765eb461"
 
 [[package]]
 name = "siphasher"

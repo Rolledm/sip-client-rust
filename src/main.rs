@@ -8,6 +8,7 @@ use xmltree::Element;
 
 static MY_CSS: &'static str = include_str!("./main.css");
 
+
 fn get_theme() -> ThemeValue {
     ThemeValue::create_from_css(DEFAULT_THEME_CSS)
         .extension_css(MY_CSS)
@@ -18,6 +19,11 @@ fn get_theme() -> ThemeValue {
 #[derive(Debug, Copy, Clone)]
 enum Action {
     Login,
+    Call,
+    ChangePresence,
+    ChangeDND,
+    Cancel,
+    Update,
 }
 
 enum AppState {
@@ -29,11 +35,18 @@ enum AppState {
 pub struct MainViewState {
     app_state: AppState,
     action: Option<Action>,
+    presence: String,
+    dnd: bool,
+    stream: Option<TcpStream>,
 }
 
 impl Default for MainViewState {
     fn default() -> Self {
-        MainViewState { app_state: AppState::Logging, action: None }
+        MainViewState { app_state: AppState::Logging, 
+                        action: None, 
+                        presence: String::from("available"), 
+                        dnd: false, 
+                        stream: None }
     }
 }
 
@@ -41,82 +54,55 @@ impl MainViewState {
     fn action(&mut self, action: impl Into<Option<Action>>) {
         self.action = action.into();
     }
-}
 
-fn login(ext: &String, pass: &String) -> Result<(), &'static str> {
-    println!("your ext = {}\nyour pass = {}\n", ext, pass);
-    let mut message = sip_rld::Message::new(sip_rld::MessageType::Request(sip_rld::RequestMethod::Register), String::from("my.dom.ru"));
-
-    message.to(String::new(), ext.to_string())
-            .via("TCP".to_string(), "localhost".to_string(), "5060".to_string())
-            .max_forwards("70".to_string())
-            .cseq("1".to_string())
-            .call_id("HARDCODED".to_string())
-            .request_uri("localhost".to_string());
-
-
-    match TcpStream::connect("localhost:7878") {
-        Ok(mut stream) => {
-            println!("Connected!");
-            let msg = message.build_message();
-            stream.write(msg.as_bytes()).unwrap();
-            let mut data = [0; 10];
-            match stream.read(&mut data) {
-                Ok(_) => {
-                    let text = from_utf8(&data).unwrap();
-                    if text.starts_with("200 OK") {
-                        println!("Successfully registered!");
-                        return Ok(());
-                    }
-                    println!("Output from server: {}", text);
-                    //self.app_state = AppState::Main;
-                },
-                Err(e) => {
-                    println!("Err: {}", e);
-                }
-            }
-        },
-        Err(e) => {
-            println!("Connection failed: {}", e);
-        }
-    }
-    Err("Register failed")
-}
-
-impl State for MainViewState {
-    fn init(&mut self, _: &mut Registry, ctx: &mut Context<'_>) {
-        ctx.widget().set("logged_ext", String16::from(format!("Ext: ")));
-    }
-
-
-    fn update(&mut self, _: &mut Registry, ctx: &mut Context<'_>) {
-        if let Some(action) = self.action {
-            match action {
-                Action::Login => {
-                    ctx.widget().set("login_status_string", String16::from("Logging"));
-                    let ext = ctx.widget().get_mut::<String16>("ext").as_string();
-                    let pass = ctx.widget().get_mut::<String16>("pass").as_string();
-                    let login = login(&ext, &pass);
-                    match login {
-                        Ok(_) => {
-                            ctx.widget().set("login_status_string", String16::from("Success!"));
-                            ctx.widget().set("logged_ext", String16::from(format!("Ext: {}", ext)));
-                            // also change application state
-                        },
-                        Err(e) => {
-                            println!("Error: {}", e);
-                            ctx.widget().set("login_status_string", String16::from("Error"));
+    fn login(&self, ext: &String, pass: &String) -> Result<(), &'static str> {
+        println!("your ext = {}\nyour pass = {}\n", ext, pass);
+        let mut message = sip_rld::Message::new(sip_rld::MessageType::Request(sip_rld::RequestMethod::Register), String::from("my.dom.ru"));
+    
+        message.to(None, ext.to_string())
+                .via("TCP".to_string(), "localhost".to_string(), "5060".to_string())
+                .max_forwards("70".to_string())
+                .cseq("1".to_string())
+                .call_id("HARDCODED".to_string())
+                .request_uri(ext.to_string());
+    
+    
+        match TcpStream::connect("localhost:5060") {
+            Ok(mut stream) => {
+                println!("Connected!");
+                let msg = message.build_message();
+                stream.write(msg.as_bytes()).unwrap();
+                let mut data = [0; 1024];
+                match stream.read(&mut data) {
+                    Ok(_) => {
+                        let text = String::from_utf8_lossy(&data);
+                        let message = sip_rld::Message::parse(&text);
+                        println!("{:?}", message);
+                        println!("{}", text);
+                        match message.mtype {
+                            sip_rld::MessageType::Request(_) => return Err("Invalid message received"),
+                            sip_rld::MessageType::Response(resp) => {
+                                if resp == "200 OK" {
+                                    println!("Successfully registered!");
+                                    return Ok(());
+                                } else {
+                                    println!("Invalid response: {}", resp);
+                                    return Err("Invalid response");
+                                }
+                            }
                         }
+                        //self.app_state = AppState::Main;
+                    },
+                    Err(e) => {
+                        println!("Err: {}", e);
                     }
-                    /*println!("Login");
-                    println!("ext {}", ctx.widget().get_mut::<String16>("ext"));
-                    println!("pass {}", ctx.widget().get_mut::<String16>("pass"));*/
-
                 }
+            },
+            Err(e) => {
+                println!("Connection failed: {}", e);
             }
-
-            self.action = None;
         }
+        Err("Register failed")
     }
 }
 
@@ -124,7 +110,12 @@ widget!(MainView<MainViewState> {
     ext: String16,
     pass: String16,
     login_status_string: String16,
-    logged_ext: String16
+    logged_ext: String16,
+    call_ext: String16,
+    presence_text_input: String16,
+    status_line: String16,
+    dnd: String16,
+    presence: String16
     //main_status_string: String16,
     //feature_status_string: String16
 });
@@ -191,7 +182,7 @@ impl Template for MainView {
                                 .child(TextBlock::create()
                                     .height(8.0)
                                     .margin(5.0)
-                                    .text("Status line...")
+                                    .text(("status_line", id))
                                     .horizontal_alignment("left")
                                     .class("h3")
                                     .build(ctx),)
@@ -205,7 +196,7 @@ impl Template for MainView {
                                 .child(TextBox::create() // change .text
                                     .height(8.0)
                                     .margin(2.0)
-                                    .text(("pass", id))
+                                    .text(("call_ext", id))
                                     .horizontal_alignment("left")
                                     .water_mark("dial...")
                                     .build(ctx))
@@ -215,7 +206,7 @@ impl Template for MainView {
                                     .child(Button::create()
                                         .margin(2.0)
                                         .on_click(move |states, _| {
-                                            states.get_mut::<MainViewState>(id).action(Action::Login);
+                                            states.get_mut::<MainViewState>(id).action(Action::Call);
                                             true
                                         })
                                         .text("Call")
@@ -224,7 +215,7 @@ impl Template for MainView {
                                     .child(Button::create()
                                         .margin(2.0)
                                         .on_click(move |states, _| {
-                                            states.get_mut::<MainViewState>(id).action(Action::Login);
+                                            states.get_mut::<MainViewState>(id).action(Action::Cancel);
                                             true
                                         })
                                         .text("Cancel")
@@ -249,7 +240,7 @@ impl Template for MainView {
                         .child(TextBlock::create() // ext handler
                             .height(8.0)
                             .margin(5.0)
-                            .text("Your presence: unknown")
+                            .text(("presence", id))
                             .horizontal_alignment("left")
                             .class("h3")
                             .build(ctx),)
@@ -259,14 +250,14 @@ impl Template for MainView {
                             .child(TextBox::create() // change .text
                                 .height(8.0)
                                 .margin(2.0)
-                                .text(("pass", id))
+                                .text(("presence_text_input", id))
                                 .horizontal_alignment("left")
                                 .water_mark("Change presence...")
                                 .build(ctx))
                             .child(Button::create()
                                 .margin(2.0)
                                 .on_click(move |states, _| {
-                                    states.get_mut::<MainViewState>(id).action(Action::Login);
+                                    states.get_mut::<MainViewState>(id).action(Action::ChangePresence);
                                     true
                                 })
                                 .text("Change")
@@ -279,14 +270,14 @@ impl Template for MainView {
                             .child(TextBlock::create() // ext handler
                                 .height(8.0)
                                 .margin(5.0)
-                                .text("DND: unknown")
+                                .text(("dnd", id))
                                 .horizontal_alignment("left")
                                 .class("h3")
                                 .build(ctx),)
                             .child(Button::create()
                                 .margin(2.0)
                                 .on_click(move |states, _| {
-                                    states.get_mut::<MainViewState>(id).action(Action::Login);
+                                    states.get_mut::<MainViewState>(id).action(Action::ChangeDND);
                                     true
                                 })
                                 .text("Change")
@@ -296,7 +287,7 @@ impl Template for MainView {
                         .child(TextBlock::create()
                             .height(8.0)
                             .margin(5.0)
-                            .text("1176: unknown")
+                            .text("1176: available")
                             .horizontal_alignment("left")
                             .class("h3")
                             .build(ctx),)
@@ -308,6 +299,77 @@ impl Template for MainView {
                 )
                 .build(ctx),
         )
+    }
+}
+
+impl State for MainViewState {
+    fn init(&mut self, _: &mut Registry, ctx: &mut Context<'_>) {
+        ctx.widget().set("logged_ext", String16::from(format!("Ext: ")));
+        ctx.widget().set("status_line", String16::from("Status line..."));
+        ctx.widget().set("dnd", String16::from("DND: unknown"));
+        ctx.widget().set("presence", String16::from("Your presence: unknown"));
+    }
+
+
+    fn update(&mut self, _: &mut Registry, ctx: &mut Context<'_>) {
+        if let Some(action) = self.action {
+            match action { //login_status_string
+                Action::Login => {
+                    match self.app_state {
+                        AppState::Logging => {
+                            ctx.widget().set("login_status_string", String16::from("Logging"));
+                            let ext = ctx.widget().get_mut::<String16>("ext").as_string();
+                            let pass = ctx.widget().get_mut::<String16>("pass").as_string();
+                            let login = self.login(&ext, &pass);
+                            match login {
+                                Ok(_) => {
+                                    ctx.widget().set("login_status_string", String16::from("Success!"));
+                                    ctx.widget().set("logged_ext", String16::from(format!("Ext: {}", ext)));
+                                    self.app_state = AppState::Main;
+                                    
+                                    // move to sep func
+                                    ctx.widget().set("presence", String16::from(format!("Your presence: {}", self.presence.clone())));
+                                    if self.dnd {
+                                        ctx.widget().set("dnd", String16::from("DND: enabled"));
+                                    } else {
+                                        ctx.widget().set("dnd", String16::from("DND: disabled"));
+                                    }
+                                },
+                                Err(e) => {
+                                    println!("Error: {}", e);
+                                    ctx.widget().set("login_status_string", String16::from("Error"));
+                                }
+                            }
+                        },
+                        _ => ctx.widget().set("status_line", String16::from("Already logged in"))
+                    };
+                },
+                Action::Call => {
+                    println!("Call {}", ctx.widget().get_mut::<String16>("call_ext").as_string())
+                },
+                Action::ChangePresence => {
+                    let presence = ctx.widget().get_mut::<String16>("presence_text_input").as_string();
+                    self.presence = presence;
+                    ctx.widget().set("presence", String16::from(format!("Your presence: {}", self.presence.clone())));
+                },
+                Action::ChangeDND => {
+                    self.dnd = !self.dnd;
+                    if self.dnd {
+                        ctx.widget().set("dnd", String16::from("DND: enabled"));
+                    } else {
+                        ctx.widget().set("dnd", String16::from("DND: disabled"));
+                    }
+                },
+                Action::Cancel => {
+                    println!("Cancel")
+                },
+                Action::Update => {
+                    
+                }
+            }
+
+            self.action = None;
+        }
     }
 }
 
